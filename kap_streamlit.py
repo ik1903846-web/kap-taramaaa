@@ -42,12 +42,9 @@ def fetch_all():
         def g(i):
             try: return d[i]
             except: return None
-        price = g(3)
-        high52 = g(23)
-        ath_dus = round(((price-high52)/high52)*100,1) if price and high52 and high52>0 else None
         stocks.append({
             "Hisse": g(0), "Şirket": g(1), "Sektör": g(2) or "Diğer",
-            "Fiyat": price, "Gün%": round(g(4) or 0,2),
+            "Fiyat": g(3), "Gün%": round(g(4) or 0,2),
             "Piyasa Değeri(B)": round(g(5)/1e9,2) if g(5) else None,
             "FK": round(g(6),1) if g(6) and g(6)>0 else None,
             "PD/DD": round(g(7),2) if g(7) and g(7)>0 else None,
@@ -60,12 +57,9 @@ def fetch_all():
             "Borç/Özkaynak": round(g(14) or 0,2),
             "1Y Getiri%": round(g(15) or 0,1),
             "3Y Getiri%": round(g(16) or 0,1),
-            "5Y Getiri%": round(g(17) or 0,1),
-            "ATH Düşüş%": ath_dus,
+            "5Y Getiri%": round(g(17) or 0,1) if g(17) else None,
             "Hasılat(M)": round(g(18)/1e6,0) if g(18) else None,
-            "Brüt Kâr(M)": round(g(19)/1e6,0) if g(19) else None,
             "Net Kâr(M)": round(g(20)/1e6,0) if g(20) else None,
-            "Serbest NK(M)": round(g(21)/1e6,0) if g(21) else None,
             "FAVÖK(M)": round(g(22)/1e6,0) if g(22) else None,
         })
     return pd.DataFrame(stocks)
@@ -80,7 +74,6 @@ try:
         sektor = st.selectbox("Sektör", ["Tümü"] + sorted(df["Sektör"].dropna().unique().tolist()))
         min_roe = st.slider("Min ROE%", 0, 100, 0)
         min_marj = st.slider("Min Net Marj%", 0, 100, 0)
-        min_5y = st.slider("Min 5Y Getiri%", 0, 2000, 0, 50)
 
     filtered = df.copy()
     if hisse:
@@ -92,20 +85,15 @@ try:
         filtered = filtered[filtered["ROE%"] >= min_roe]
     if min_marj > 0:
         filtered = filtered[filtered["Net Marj%"] >= min_marj]
-    if min_5y > 0:
-        filtered = filtered[filtered["5Y Getiri%"] >= min_5y]
-
-    filtered = filtered.sort_values("Piyasa Değeri(B)", ascending=False)
-    st.markdown(f"**{len(filtered)} hisse bulundu**")
 
     tab1, tab2, tab3 = st.tabs(["📊 Genel", "💰 Finansal", "📈 Getiri"])
 
     with tab1:
-        cols = ["Hisse","Şirket","Sektör","Fiyat","FK","PD/DD","ROE%","Net Marj%","ATH Düşüş%"]
+        cols = ["Hisse","Şirket","Sektör","Fiyat","FK","PD/DD","ROE%","Net Marj%"]
         st.dataframe(filtered[cols].reset_index(drop=True), use_container_width=True, height=600)
 
     with tab2:
-        cols = ["Hisse","Şirket","Hasılat(M)","Brüt Kâr(M)","Net Kâr(M)","FAVÖK(M)","Serbest NK(M)"]
+        cols = ["Hisse","Şirket","Hasılat(M)","Net Kâr(M)","FAVÖK(M)"]
         st.dataframe(filtered[cols].reset_index(drop=True), use_container_width=True, height=600)
 
     with tab3:
