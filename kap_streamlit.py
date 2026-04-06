@@ -60,4 +60,77 @@ def fetch_all():
             "Satış Büy%": round(g(11) or 0, 1),
             "Kâr Büy%": round(g(12) or 0, 1),
             "Cari Oran": round(g(13) or 0, 2),
-            "Borç​​​​​​​​​​​​​​​​
+            "Borç/Özkaynak": round(g(14) or 0, 2),
+            "1Y Getiri%": round(g(15) or 0, 1),
+            "3Y Getiri%": round(g(16) or 0, 1),
+            "5Y Getiri%": round(g(17) or 0, 1),
+            "ATH Düşüş%": round(((g(3)-g(23))/g(23))*100, 1) if g(3) and g(23) else None,
+            # Hasılat (5 yıl)
+            f"Hasılat {yil}(M)": round(g(18)/1e6, 0) if g(18) else None,
+            f"Hasılat {yil-1}(M)": round(g(24)/1e6, 0) if g(24) else None,
+            f"Hasılat {yil-2}(M)": round(g(25)/1e6, 0) if g(25) else None,
+            f"Hasılat {yil-3}(M)": round(g(26)/1e6, 0) if g(26) else None,
+            f"Hasılat {yil-4}(M)": round(g(27)/1e6, 0) if g(27) else None,
+            # Net Kâr (5 yıl)
+            f"Net Kâr {yil}(M)": round(g(20)/1e6, 0) if g(20) else None,
+            f"Net Kâr {yil-1}(M)": round(g(28)/1e6, 0) if g(28) else None,
+            f"Net Kâr {yil-2}(M)": round(g(29)/1e6, 0) if g(29) else None,
+            f"Net Kâr {yil-3}(M)": round(g(30)/1e6, 0) if g(30) else None,
+            f"Net Kâr {yil-4}(M)": round(g(31)/1e6, 0) if g(31) else None,
+            # FAVÖK (5 yıl)
+            f"FAVÖK {yil}(M)": round(g(22)/1e6, 0) if g(22) else None,
+            f"FAVÖK {yil-1}(M)": round(g(32)/1e6, 0) if g(32) else None,
+            f"FAVÖK {yil-2}(M)": round(g(33)/1e6, 0) if g(33) else None,
+            f"FAVÖK {yil-3}(M)": round(g(34)/1e6, 0) if g(34) else None,
+            f"FAVÖK {yil-4}(M)": round(g(35)/1e6, 0) if g(35) else None,
+        })
+    return pd.DataFrame(stocks)
+
+try:
+    df = fetch_all()
+    st.success(f"✅ {len(df)} hisse yüklendi")
+
+    with st.sidebar:
+        st.header("⚙️ Filtreler")
+        hisse = st.text_input("Hisse Ara", placeholder="THYAO, GARAN")
+        sektor = st.selectbox("Sektör", ["Tümü"] + sorted(df["Sektör"].dropna().unique().tolist()))
+        min_roe = st.slider("Min ROE%", 0, 100, 0)
+        min_marj = st.slider("Min Net Marj%", 0, 100, 0)
+
+    filtered = df.copy()
+    if hisse:
+        aranan = [h.strip().upper() for h in hisse.split(",")]
+        filtered = filtered[filtered["Hisse"].isin(aranan)]
+    if sektor != "Tümü":
+        filtered = filtered[filtered["Sektör"] == sektor]
+    if min_roe > 0:
+        filtered = filtered[filtered["ROE%"] >= min_roe]
+    if min_marj > 0:
+        filtered = filtered[filtered["Net Marj%"] >= min_marj]
+
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Genel", "💰 Hasılat", "🟢 Net Kâr", "📈 FAVÖK"])
+
+    yil = datetime.now().year
+
+    with tab1:
+        goster = ["Hisse","Şirket","Sektör","Fiyat","FK","PD/DD","ROE%","Net Marj%","Satış Büy%","Kâr Büy%","ATH Düşüş%","5Y Getiri%"]
+        st.dataframe(filtered[[c for c in goster if c in filtered.columns]].reset_index(drop=True), use_container_width=True, height=600)
+
+    with tab2:
+        cols = ["Hisse","Şirket"] + [f"Hasılat {yil-i}(M)" for i in range(5)]
+        st.dataframe(filtered[[c for c in cols if c in filtered.columns]].reset_index(drop=True), use_container_width=True, height=600)
+
+    with tab3:
+        cols = ["Hisse","Şirket"] + [f"Net Kâr {yil-i}(M)" for i in range(5)]
+        st.dataframe(filtered[[c for c in cols if c in filtered.columns]].reset_index(drop=True), use_container_width=True, height=600)
+
+    with tab4:
+        cols = ["Hisse","Şirket"] + [f"FAVÖK {yil-i}(M)" for i in range(5)]
+        st.dataframe(filtered[[c for c in cols if c in filtered.columns]].reset_index(drop=True), use_container_width=True, height=600)
+
+    buf = BytesIO()
+    filtered.to_excel(buf, index=False)
+    st.download_button("📥 Excel İndir", buf.getvalue(), f"bist_{datetime.now().strftime('%Y%m%d')}.xlsx")
+
+except Exception as e:
+    st.error(f"Hata: {e}")
