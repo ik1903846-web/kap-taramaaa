@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import pandas as pd
 import io
-from datetime import datetime
 
 st.set_page_config(page_title="KAP Finansal Tarama", page_icon="📊", layout="wide")
 st.title("📊 KAP Finansal Tarama")
@@ -10,7 +9,7 @@ st.title("📊 KAP Finansal Tarama")
 HEADERS = {
     "User-Agent": "Mozilla/5.0",
     "Referer": "https://kap.org.tr/tr/kalem-karsilastirma",
-    "Accept": "application/json, text/plain, */*",
+    "Accept": "*/*",
 }
 
 YILLAR = [2020, 2021, 2022, 2023, 2024]
@@ -33,14 +32,8 @@ if st.button("🚀 Veriyi Çek", type="primary"):
     with st.spinner("KAP'tan veriler çekiliyor..."):
         try:
             resp = requests.post(url, json=payload, headers=HEADERS, timeout=60)
-            df = pd.read_excel(io.BytesIO(resp.content), skiprows=5)
-            df.columns = df.columns.str.strip()
-            if hisse_filtre.strip():
-                aranan = [h.strip().upper() for h in hisse_filtre.split(",")]
-                df = df[df["Şirket"].str.upper().isin(aranan)]
-            st.success(f"✅ {len(df)} kayıt bulundu")
-            st.dataframe(df, use_container_width=True)
-            csv = df.to_csv(index=False).encode("utf-8-sig")
-            st.download_button("📥 CSV İndir", csv, "kap.csv", "text/csv")
+            st.write("Status:", resp.status_code)
+            st.write("Content-Type:", resp.headers.get("Content-Type"))
+            st.write("İlk 500 karakter:", resp.text[:500])
         except Exception as e:
             st.error(f"Hata: {e}")
